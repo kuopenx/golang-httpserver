@@ -1,4 +1,4 @@
-FROM golang:1.18-alpine AS build
+FROM golang:1.18-alpine AS builder
 
 ENV GO111MODULE=auto \
     CGO_ENABLE=0 \
@@ -9,8 +9,7 @@ WORKDIR /build
 COPY . .
 RUN go build -o httpserver .
 
-FROM scratch
-WORKDIR /
-COPY --from=build /build/httpserver .
+FROM alpine
+COPY --from=builder /build/httpserver .
 EXPOSE 80
-ENTRYPOINT ["httpserver"]
+ENTRYPOINT ["./httpserver"]
