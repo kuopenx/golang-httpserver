@@ -1,5 +1,6 @@
 *.md
 .dockerignore
 .git
+.idea
 Dockerfile
 LICENSE
