@@ -10,6 +10,7 @@ COPY . .
 RUN go build -o httpserver .
 
 FROM scratch
-COPY --from=build /build/httpserver /httpserver
+WORKDIR /
+COPY --from=build /build/httpserver .
 EXPOSE 80
-ENTRYPOINT ["/httpserver"]
+ENTRYPOINT ["httpserver"]
