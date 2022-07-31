@@ -2,15 +2,23 @@ package main
 
 import (
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
-	bookListHandler := func(w http.ResponseWriter, r *http.Request) {
+	booklistHandler := func(w http.ResponseWriter, r *http.Request) {
+		// 为请求增加模拟延时
+		delay := rand.Intn(3)
+		time.Sleep(time.Millisecond * time.Duration(delay))
+		fmt.Println("延时了", delay, "秒")
+
 		io.WriteString(w, "This is a book list.")
 		w.WriteHeader(http.StatusOK)
 
@@ -33,7 +41,13 @@ func main() {
 		io.WriteString(w, "200")
 	}
 
-	http.HandleFunc("/book/list", bookListHandler)
+	// 处理metrics
+	metricsHandler := func(w http.ResponseWriter, r *http.Request) {
+		handler := promhttp.Handler()
+		handler.ServeHTTP(w, r)
+	}
+	http.HandleFunc("/booklist", booklistHandler)
 	http.HandleFunc("/healthz", healthzHandler)
+	http.HandleFunc("/metrics", metricsHandler)
 	log.Fatal(http.ListenAndServe(":80", nil))
 }
