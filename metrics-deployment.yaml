@@ -15,6 +15,8 @@ spec:
       labels:
         app: httpserver
     spec:
+      imagePullSecrets:
+        - name: regcred
       containers:
         - name: httpserver
           image: kuopenx/httpserver:v1.0-metrics
