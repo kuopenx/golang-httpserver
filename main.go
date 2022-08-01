@@ -15,9 +15,9 @@ import (
 func main() {
 	booklistHandler := func(w http.ResponseWriter, r *http.Request) {
 		// 为请求增加模拟延时
-		delay := rand.Intn(3)
-		time.Sleep(time.Millisecond * time.Duration(delay))
-		fmt.Println("延时了", delay, "秒")
+		delay := rand.Intn(2001)
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+		fmt.Println("延时了", delay, "毫秒")
 
 		io.WriteString(w, "This is a book list.")
 		w.WriteHeader(http.StatusOK)
