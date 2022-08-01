@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io"
 	"log"
@@ -12,14 +13,60 @@ import (
 	"time"
 )
 
+const (
+	metricsNamespace = "httpserver"
+	metricsHelp      = "time spent."
+	metricsName      = "execution_latency_seconds"
+)
+
+var functionLatency = prometheus.NewHistogramVec(
+	prometheus.HistogramOpts{
+		Namespace: metricsNamespace,
+		Name:      metricsName,
+		Help:      metricsHelp,
+		Buckets:   prometheus.ExponentialBuckets(0.001, 2, 15),
+	}, []string{"step"},
+)
+
+type ExecutionTimer struct {
+	histogram *prometheus.HistogramVec
+	start     time.Time
+	last      time.Time
+}
+
+func (t *ExecutionTimer) observeTotal() {
+	(*t.histogram).WithLabelValues("total").Observe(time.Now().Sub(t.start).Seconds())
+}
+
+func newExecutionTimer(histogram *prometheus.HistogramVec) *ExecutionTimer {
+	now := time.Now()
+	return &ExecutionTimer{
+		histogram: histogram,
+		start:     now,
+		last:      now,
+	}
+}
+
+func registerMetrics() {
+	err := prometheus.Register(functionLatency)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
 func main() {
-	booklistHandler := func(w http.ResponseWriter, r *http.Request) {
+	registerMetrics()
+
+	helloHandler := func(w http.ResponseWriter, r *http.Request) {
+		timer := newExecutionTimer(functionLatency)
+		defer timer.observeTotal()
+
 		// 为请求增加模拟延时
 		delay := rand.Intn(2001)
 		time.Sleep(time.Duration(delay) * time.Millisecond)
 		fmt.Println("延时了", delay, "毫秒")
 
-		io.WriteString(w, "This is a book list.")
+		io.WriteString(w, "hello.")
 		w.WriteHeader(http.StatusOK)
 
 		// 1. 接收客户端 request，并将 request 中带的 header 写入 response header
@@ -41,13 +88,8 @@ func main() {
 		io.WriteString(w, "200")
 	}
 
-	// 处理metrics
-	metricsHandler := func(w http.ResponseWriter, r *http.Request) {
-		handler := promhttp.Handler()
-		handler.ServeHTTP(w, r)
-	}
-	http.HandleFunc("/booklist", booklistHandler)
+	http.HandleFunc("/hello", helloHandler)
 	http.HandleFunc("/healthz", healthzHandler)
-	http.HandleFunc("/metrics", metricsHandler)
+	http.HandleFunc("/metrics", promhttp.Handler().ServeHTTP)
 	log.Fatal(http.ListenAndServe(":80", nil))
 }
